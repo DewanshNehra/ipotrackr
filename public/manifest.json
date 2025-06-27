@@ -1,0 +1,72 @@
+{
+  "name": "IPOtrackr - Live IPO GMP Tracker",
+  "short_name": "IPOtrackr",
+  "description": "Real-time IPO GMP tracker with live grey market premium data and subscription analysis",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1A1A1A",
+  "theme_color": "#00FF7B",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-IN",
+  "categories": ["finance", "business", "productivity"],
+  "icons": [
+    {
+      "src": "/IPOtrackr.svg",
+      "sizes": "64x64",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/IPOtrackr.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/IPOtrackr.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/og-image.jpg",
+      "sizes": "1200x630",
+      "type": "image/jpeg",
+      "form_factor": "wide",
+      "label": "IPOtrackr Dashboard"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open IPOs",
+      "short_name": "Open",
+      "description": "View currently open IPOs for bidding",
+      "url": "/?status=open",
+      "icons": [
+        {
+          "src": "/IPOtrackr.svg",
+          "sizes": "64x64",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Upcoming IPOs",
+      "short_name": "Upcoming",
+      "description": "View upcoming IPO launches",
+      "url": "/?status=upcoming",
+      "icons": [
+        {
+          "src": "/IPOtrackr.svg",
+          "sizes": "64x64",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
+}
