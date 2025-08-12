@@ -1,5 +1,6 @@
 import { APIResponse, ProcessedIPOData, IPOGmpResponse, GmpHistoryItem, IPOSubscriptionResponse, ProcessedSubscriptionData } from '@/types/ipo';
 import { processIPOData, processGmpHistoryData, processSubscriptionData } from './utils';
+import type { IPOActivityDates } from '@/types/ipo';
 
 const API_BASE_URL = 'https://webnodejs.investorgain.com/cloud/report/data-read/331/1/6/2025/2025-26/0/all';
 const GMP_API_BASE_URL = 'https://webnodejs.investorgain.com/cloud/ipo/ipo-gmp-read';
@@ -104,6 +105,21 @@ export async function fetchIPOSubscriptionData(ipoId: number): Promise<Processed
     return processSubscriptionData(data);
   } catch (error) {
     console.error('Error fetching subscription data:', error);
+    return null;
+  }
+}
+
+export async function fetchIPOActivityDates(detailsUrl: string): Promise<IPOActivityDates | null> {
+  try {
+    const res = await fetch(`/api/activity-dates?url=${encodeURIComponent(detailsUrl)}`, {
+      headers: { 'Accept': 'application/json' },
+      cache: 'no-store'
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data as IPOActivityDates;
+  } catch (e) {
+    console.error('Failed to load IPO activity dates:', e);
     return null;
   }
 }

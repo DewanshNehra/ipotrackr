@@ -37,7 +37,7 @@
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/ipotrackr.git
+   git clone https://github.com/DewanshNehra/ipotrackr.git
    cd ipotrackr
    ```
 
@@ -52,4 +52,4 @@
 
 3. **Run the development server**
    ```bash
-   npm run dev
+   pnpm run dev

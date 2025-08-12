@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ProcessedIPOData, GmpHistoryItem, ProcessedSubscriptionData } from '@/types/ipo';
+import { ProcessedIPOData, GmpHistoryItem, ProcessedSubscriptionData, IPOActivityDates } from '@/types/ipo';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, TooltipItem } from 'chart.js';
 import { BsXLg, BsArrowUp, BsArrowDown, BsBarChart } from 'react-icons/bs';
-import { fetchIPOGmpData, fetchIPOSubscriptionData } from '@/lib/api';
-import { createChartData } from '@/lib/utils';
+import { fetchIPOGmpData, fetchIPOSubscriptionData, fetchIPOActivityDates } from '@/lib/api';
+import { createChartData, formatDateFull, computeActivityProgress, isMilestoneDone } from '@/lib/utils';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
@@ -21,7 +21,8 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
   const [error, setError] = useState<string | null>(null);
   const [gmpHistory, setGmpHistory] = useState<GmpHistoryItem[]>([]);
   const [subscriptionData, setSubscriptionData] = useState<ProcessedSubscriptionData | null>(null);
-  
+  const [activityDates, setActivityDates] = useState<IPOActivityDates | null>(null);
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -45,6 +46,21 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
     
     loadData();
   }, [ipoId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!ipoData?.detailsUrl) return;
+        const parsed = await fetchIPOActivityDates(ipoData.detailsUrl);
+        if (!cancelled && parsed) setActivityDates(parsed);
+      } catch (e) {
+
+        console.warn('Activity dates parse failed:', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [ipoData?.detailsUrl]);
 
   const chartData = createChartData(gmpHistory);
   const tableData = [...gmpHistory].reverse();
@@ -117,6 +133,22 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
     return () => { document.body.style.overflow = 'auto'; };
   }, []);
   
+  const rawActivityItems = [
+    { key: 'open', label: 'IPO Open', date: activityDates?.biddingStartDate || ipoData.biddingStartDate },
+    { key: 'close', label: 'IPO Close', date: activityDates?.biddingEndDate || ipoData.biddingEndDate },
+    { key: 'boa', label: 'Basis of Allotment', date: activityDates?.basisOfAllotmentDate || ipoData.basisOfAllotmentDate },
+    { key: 'refunds', label: 'Refunds Initiation', date: activityDates?.refundsInitiationDate || undefined },
+    { key: 'credit', label: 'Credit to Demat', date: activityDates?.creditToDematDate || undefined },
+    { key: 'listing', label: 'IPO Listing', date: activityDates?.listingDate || ipoData.listingDate },
+  ];
+
+  const activityItems = rawActivityItems.filter(i => !!i.date);
+
+  // Progress based on visible items with continuous interpolation (IST-aware)
+  const progressPercent = activityItems.length > 1
+    ? computeActivityProgress(activityItems)
+    : 0;
+
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-[#1A1A1A] border border-[#2d2d2d] rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto modal-scrollbar" onClick={e => e.stopPropagation()}>
@@ -140,18 +172,21 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
         
         {/* Modal content */}
         <div className="p-6">
-          {/* IPO details summary */}
+          {/* Summary cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+            {/* Current GMP */}
             <div className="bg-[#252525] p-4 rounded-lg border border-[#2d2d2d]">
               <div className="text-gray-400 text-sm mb-1">Current GMP</div>
               <div className="text-2xl font-bold text-[#00FF7B]">₹{ipoData.gmpValue}</div>
               <div className="text-sm">{ipoData.gmpPercentage} of issue price</div>
             </div>
+            {/* Issue Price */}
             <div className="bg-[#252525] p-4 rounded-lg border border-[#2d2d2d]">
               <div className="text-gray-400 text-sm mb-1">Issue Price</div>
               <div className="text-2xl font-bold">₹{ipoData.price}</div>
               <div className="text-sm">Lot Size: {ipoData.lotSize}</div>
             </div>
+            {/* Expected Profit */}
             <div className="bg-[#252525] p-4 rounded-lg border border-[#2d2d2d]">
               <div className="text-gray-400 text-sm mb-1">Expected Profit</div>
               <div className={`text-2xl font-bold ${ipoData.expectedProfit >= 0 ? 'text-[#00FF7B]' : 'text-red-400'}`}>
@@ -159,6 +194,7 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
               </div>
               <div className="text-sm">Per lot</div>
             </div>
+            {/* Total Subscription */}
             <div className="bg-[#252525] p-4 rounded-lg border border-[#2d2d2d]">
               <div className="text-gray-400 text-sm mb-1">Total Subscription</div>
               {subscriptionData ? (
@@ -172,7 +208,7 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
             </div>
           </div>
 
-          {/* Subscription breakdown */}
+          {/* Subscription breakdown (unchanged) */}
           {subscriptionData && (
             <div className="mb-8 bg-[#0F0F0F] p-4 rounded-xl border border-[#2d2d2d]">
               <div className="flex items-center gap-2 mb-4">
@@ -206,32 +242,69 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
               </div>
             </div>
           )}
-          
-          {/* Chart */}
+
+          {/* IPO Activity */}
+          {activityItems.length >= 2 && (
+            <section className="mb-8 bg-[#0F0F0F] p-4 rounded-xl border border-[#2d2d2d]">
+              <h3 className="text-lg font-medium text-white mb-4">IPO Activity</h3>
+
+              <div className="overflow-x-auto md:overflow-x-visible">
+                <div
+                  className="flex flex-col gap-4 w-full md:w-auto px-1"
+                  style={{ minWidth: `${Math.max(activityItems.length, 6) * 140}px` }}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    {activityItems.map((item) => {
+                      const done = isMilestoneDone(item);
+                      return (
+                        <div key={item.key} className="flex-1 flex flex-col items-center min-w-0">
+                          <div className={`w-3 h-3 rounded-full ${done ? 'bg-[#00FF7B]' : 'bg-[#2d2d2d]'}`} />
+                          <div className="mt-2 text-center">
+                            <div className="text-xs text-gray-300 truncate max-w-[120px]">{item.label}</div>
+                            <div className="text-[10px] text-gray-400">{formatDateFull(item.date)}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="w-11/12 h-1 bg-[#2d2d2d] rounded">
+                    <div
+                      className="h-1 bg-[#00FF7B] rounded transition-all duration-500"
+                      style={{ width: `${progressPercent}%` }}
+                      aria-label="IPO activity progress"
+                    />
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Chart*/}
           <div className="mb-8 bg-[#0F0F0F] p-4 rounded-xl border border-[#2d2d2d]">
             <h3 className="text-lg font-medium mb-4 text-white">GMP Trend Analysis</h3>
             {isLoading ? (
-              <div className="h-80 flex items-center justify-center">
+              <div className="h-64 md:h-[420px] flex items-center justify-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#00FF7B]"></div>
               </div>
             ) : error ? (
-              <div className="h-80 flex items-center justify-center text-center">
+              <div className="h-64 md:h-[420px] flex items-center justify-center text-center">
                 <div>
                   <div className="text-red-400 mb-2">Error loading data</div>
                   <div className="text-gray-400 text-sm">{error}</div>
                 </div>
               </div>
             ) : gmpHistory.length === 0 ? (
-              <div className="h-80 flex items-center justify-center">
+              <div className="h-64 md:h-[420px] flex items-center justify-center">
                 <div className="text-gray-400">No GMP history available</div>
               </div>
             ) : (
-              <div className="h-80">
+              <div className="h-64 md:h-[420px]">
                 <Line data={chartData} options={chartOptions} />
               </div>
             )}
           </div>
-          
+
           {/* GMP history table */}
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full">

@@ -125,9 +125,15 @@ export default function IPOCard(props: ProcessedIPOData) {
                         </div>
                         <div>
                             <span className='text-[#5D5D5D]'>Bidding: </span>
-                            <span className='text-[#00FF7B]'>{formatDate(biddingStartDate)}</span>
-                            <span className='text-white'> - </span>
-                            <span className='text-[#FF3F42]'>{formatDate(biddingEndDate)}</span>
+                            {isNaN(new Date(biddingStartDate).getTime()) ? (
+                                <span className='text-[#FF3F42]'>Not Updated</span>
+                            ) : (
+                                <>
+                                    <span className='text-[#00FF7B]'>{formatDate(biddingStartDate)}</span>
+                                    <span className='text-white'> - </span>
+                                    <span className='text-[#FF3F42]'>{formatDate(biddingEndDate)}</span>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
