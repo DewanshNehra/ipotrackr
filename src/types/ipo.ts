@@ -3,26 +3,28 @@ export interface APIIPOObject {
   "Name": string;
   "GMP": string;
   "Fire Rating": string;
-  "Sub": string;
-  "Price": string;
-  "Est Listing": string;
+  "Sub": string;            
+  "Price": string;        
+  "Est Listing"?: string;
   "IPO Size": string;
-  "Lot": string;
+  "Lot": string;        
   "~P/E": string;
   "~id": number;
-  "Open": string;
-  "Close": string;
+  "Open": string;           
+  "Close": string;        
   "BoA Dt": string;
   "Listing": string;
-  "~Srt_Open": string;
-  "~Srt_Close": string;
+  "~Srt_Open": string;     
+  "~Srt_Close": string;    
   "~Srt_BoA_Dt": string;
   "~Str_Listing": string;
   "~urlrewrite_folder_name": string;
-  "GMP Updated": string;
+  "GMP Updated"?: string;
   "~Display_Order": number;
   "~Highlight_Row": string;
   "~IPO_Category": string;
+  "~gmp_percent_calc"?: string; 
+  "~ipo_name"?: string;  
 }
 
 export interface APIResponse {
@@ -42,13 +44,25 @@ export interface ProcessedIPOData {
   estListing: string;
   estListingValue: number;
   estListingPercentage: string;
-  biddingStartDate: string;
+  biddingStartDate: string | "-";
   biddingEndDate: string;
+  basisOfAllotmentDate?: string;
+  refundsInitiationDate?: string;
+  creditToDematDate?: string;
+  listingDate?: string;
   expectedProfit: number;
   detailsUrl: string; 
 }
 
-// New interfaces for GMP data
+export interface IPOActivityDates {
+  biddingStartDate?: string;
+  biddingEndDate?: string;
+  basisOfAllotmentDate?: string;
+  refundsInitiationDate?: string;
+  creditToDematDate?: string;
+  listingDate?: string;
+}
+
 export interface GmpHistoryItem {
   date: string;
   gmp: number;
@@ -107,7 +121,6 @@ export interface ChartData {
   datasets: ChartDataset[];
 }
 
-// New interfaces for subscription data
 export interface SubscriptionDataItem {
   bid_date: string;
   qib: string;
