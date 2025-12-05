@@ -52,4 +52,9 @@
 
 3. **Run the development server**
    ```bash
-   pnpm run dev
+    npm run dev
+    # or
+    yarn run dev
+    # or
+    pnpm run dev
+    ```
