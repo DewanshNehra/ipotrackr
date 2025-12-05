@@ -103,16 +103,6 @@ export function processIPOData(apiData: APIIPOObject): ProcessedIPOData {
   };
 }
 
-function addDaysISO(dateStr: string, days: number): string {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return '';
-  d.setDate(d.getDate() + days);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${dd}`;
-}
-
 export function formatDateFull(dateString?: string): string {
   if (!dateString) return '-';
   const d = new Date(dateString);
