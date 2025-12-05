@@ -12,22 +12,16 @@
   "categories": ["finance", "business", "productivity"],
   "icons": [
     {
-      "src": "/IPOtrackr.svg",
-      "sizes": "64x64",
-      "type": "image/svg+xml",
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/IPOtrackr.svg",
-      "sizes": "192x192",
-      "type": "image/svg+xml",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "/IPOtrackr.svg",
+      "src": "/logo.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
-      "purpose": "maskable any"
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "screenshots": [
@@ -47,9 +41,9 @@
       "url": "/?status=open",
       "icons": [
         {
-          "src": "/IPOtrackr.svg",
-          "sizes": "64x64",
-          "type": "image/svg+xml"
+          "src": "/logo.png",
+          "sizes": "192x192",
+          "type": "image/png"
         }
       ]
     },
@@ -60,9 +54,9 @@
       "url": "/?status=upcoming",
       "icons": [
         {
-          "src": "/IPOtrackr.svg",
-          "sizes": "64x64",
-          "type": "image/svg+xml"
+          "src": "/logo.png",
+          "sizes": "192x192",
+          "type": "image/png"
         }
       ]
     }
