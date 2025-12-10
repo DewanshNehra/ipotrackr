@@ -5,8 +5,8 @@ export interface APIIPOObject {
   "Rating": string;
   "Sub": string;
   "GMP(L/H)  (₹)": string;
-  "Price (₹)": string;        // Updated field name
-  "IPO Size (₹ in cr)": string; // Updated field name
+  "Price (₹)": string;
+  "IPO Size (₹ in cr)": string;
   "Lot": string;        
   "~P/E": string;
   "~id": number;
