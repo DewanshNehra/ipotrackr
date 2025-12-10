@@ -59,7 +59,7 @@ export function processIPOData(apiData: APIIPOObject): ProcessedIPOData {
     ? `${Number(apiData["~gmp_percent_calc"]).toFixed(2)}%`
     : undefined;
 
-  const price = parseNumericValue(apiData.Price || '');
+  const price = parseNumericValue(apiData["Price (₹)"] || '');
   const lotSize = Math.max(0, Math.floor(parseNumericValue(apiData.Lot || '')));
 
   const estListingValue = price > 0 ? price + (isNaN(gmpNumber) ? 0 : gmpNumber) : 0;
@@ -75,7 +75,7 @@ export function processIPOData(apiData: APIIPOObject): ProcessedIPOData {
     ? Math.round(lotSize * (estListingValue - price))
     : 0;
 
-  const issueSize = (apiData["IPO Size"] || '').replace(/&#8377;/g, '₹');
+  const issueSize = (apiData["IPO Size (₹ in cr)"] || '').replace(/&#8377;/g, '₹');
 
 
   return {
