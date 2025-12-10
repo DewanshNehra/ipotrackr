@@ -2,11 +2,11 @@ export interface APIIPOObject {
   "~orderby1": number;
   "Name": string;
   "GMP": string;
-  "Fire Rating": string;
-  "Sub": string;            
-  "Price": string;        
-  "Est Listing"?: string;
-  "IPO Size": string;
+  "Rating": string;
+  "Sub": string;
+  "GMP(L/H)  (₹)": string;
+  "Price (₹)": string;        // Updated field name
+  "IPO Size (₹ in cr)": string; // Updated field name
   "Lot": string;        
   "~P/E": string;
   "~id": number;
@@ -14,12 +14,13 @@ export interface APIIPOObject {
   "Close": string;        
   "BoA Dt": string;
   "Listing": string;
+  "Updated-On": string;
+  "Anchor": string;
   "~Srt_Open": string;     
   "~Srt_Close": string;    
   "~Srt_BoA_Dt": string;
   "~Str_Listing": string;
   "~urlrewrite_folder_name": string;
-  "GMP Updated"?: string;
   "~Display_Order": number;
   "~Highlight_Row": string;
   "~IPO_Category": string;
