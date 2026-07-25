@@ -75,7 +75,7 @@ export function processIPOData(apiData: APIIPOObject): ProcessedIPOData {
     ? Math.round(lotSize * (estListingValue - price))
     : 0;
 
-  const issueSize = (apiData["IPO Size (₹ in cr)"] || '').replace(/&#8377;/g, '₹');
+  const issueSize = (apiData["IPO Size"] || '').replace(/&#8377;/g, '₹');
 
 
   return {
@@ -126,18 +126,18 @@ export function processGmpHistoryData(gmpResponse: IPOGmpResponse): GmpHistoryIt
   
   rows.forEach(row => {
     const gmpDateCell = row.querySelector('[data-title="GMP Date"]');
-    const priceCell = row.querySelector('[data-title="GMP Price"]');
+    const priceCell = row.querySelector('[data-title="IPO Price"]');
     const gmpCell = row.querySelector('[data-title="GMP"]');
-    const estListingCell = row.querySelector('[data-title="Estimated Listing Price"]');
-    const estProfitCell = row.querySelector('[data-title="Estimated Profit Per Lot"]');
-    const lastUpdatedCell = row.querySelector('[data-title="Last updated"]');
+    const estListingCell = row.querySelector('[data-title="Est. Listing Price"]');
+    const estProfitCell = row.querySelector('[data-title="Est. Profit"]');
+    const lastUpdatedCell = row.querySelector('[data-title="Last Updated"]');
     
     if (!gmpDateCell || !priceCell || !gmpCell || !estListingCell) return;
     
     let movement: 'up' | 'down' | 'none' = 'none';
-    if (gmpCell.innerHTML.includes('arrow_up.png')) {
+    if (gmpCell.innerHTML.includes('trend-up')) {
       movement = 'up';
-    } else if (gmpCell.innerHTML.includes('arrow_down.png')) {
+    } else if (gmpCell.innerHTML.includes('trend-dn')) {
       movement = 'down';
     }
     
@@ -313,4 +313,16 @@ export function computeActivityProgress(
   const completed = i + frac;
 
   return Math.max(0, Math.min(100, (completed / segments) * 100));
+}
+// Debounce utility for search tracking
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  delay: number
+): (...args: Parameters<T>) => void {
+  let timeoutId: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
 }
