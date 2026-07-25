@@ -4,32 +4,36 @@ export interface APIIPOObject {
   "GMP": string;
   "Rating": string;
   "Sub": string;
-  "GMP(L/H)  (₹)": string;
   "Price (₹)": string;
-  "IPO Size (₹ in cr)": string;
-  "Lot": string;        
+  "IPO Size": string;
+  "Lot": string;
   "~P/E": string;
   "~id": number;
-  "Open": string;           
-  "Close": string;        
+  "Open": string;
+  "Close": string;
   "BoA Dt": string;
   "Listing": string;
   "Updated-On": string;
   "Anchor": string;
-  "~Srt_Open": string;     
-  "~Srt_Close": string;    
+  "~Srt_Open": string;
+  "~Srt_Close": string;
   "~Srt_BoA_Dt": string;
   "~Str_Listing": string;
   "~urlrewrite_folder_name": string;
   "~Display_Order": number;
   "~Highlight_Row": string;
   "~IPO_Category": string;
-  "~gmp_percent_calc"?: string; 
-  "~ipo_name"?: string;  
+  "~gmp_percent_calc"?: string;
+  "~ipo_name"?: string;
 }
 
 export interface APIResponse {
+  msg: string;
   reportTableData: APIIPOObject[];
+  totalRecords?: number;
+  totalPages?: number;
+  iPageNo?: number;
+  fldpage_size?: number;
 }
 
 export interface ProcessedIPOData {

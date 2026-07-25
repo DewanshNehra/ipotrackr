@@ -2,9 +2,9 @@ import { APIResponse, ProcessedIPOData, IPOGmpResponse, GmpHistoryItem, IPOSubsc
 import { processIPOData, processGmpHistoryData, processSubscriptionData } from './utils';
 import type { IPOActivityDates } from '@/types/ipo';
 
-const API_BASE_URL = 'https://webnodejs.investorgain.com/cloud/report/data-read/331/1/6/2025/2025-26/0/all';
-const GMP_API_BASE_URL = 'https://webnodejs.investorgain.com/cloud/ipo/ipo-gmp-read';
-const SUBSCRIPTION_API_BASE_URL = 'https://webnodejs.investorgain.com/cloud/ipo/ipo-subscription-read';
+const API_BASE_URL = 'https://webnodejs.investorgain.com/cloud/v2/report/data-read/331/1/7/2026/2026-27/0/all';
+const GMP_API_BASE_URL = 'https://webnodejs.investorgain.com/cloud/v2/ipo/ipo-gmp-read';
+const SUBSCRIPTION_API_BASE_URL = 'https://webnodejs.investorgain.com/cloud/v2/ipo/ipo-subscription-read';
 
 export async function fetchIPOData(): Promise<ProcessedIPOData[]> {
   try {
