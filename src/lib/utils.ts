@@ -1,4 +1,10 @@
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 import { APIIPOObject, ProcessedIPOData, GmpHistoryItem, IPOGmpResponse, ChartData, IPOSubscriptionResponse, ProcessedSubscriptionData } from '@/types/ipo';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 export function processIPOData(apiData: APIIPOObject): ProcessedIPOData {
   const plainName = apiData["~ipo_name"]?.trim();

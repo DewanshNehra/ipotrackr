@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ProcessedIPOData } from '@/types/ipo';
 import IPODetailModal from './ipoDetailModal';
+import Sparkline from './sparkline';
 
 export default function IPOCard(props: ProcessedIPOData) {
     const [showModal, setShowModal] = useState(false);
@@ -135,6 +136,10 @@ export default function IPOCard(props: ProcessedIPOData) {
                                 </>
                             )}
                         </div>
+                    </div>
+                    <div className='w-11/12 mt-2 pt-3 border-t border-[#2d2d2d] flex items-center gap-3'>
+                        <span className='text-[10px] uppercase tracking-wider text-[#5D5D5D] shrink-0'>GMP trend</span>
+                        <Sparkline ipoId={id} className='flex-1' />
                     </div>
                 </div>
             </article>

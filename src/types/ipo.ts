@@ -66,6 +66,8 @@ export interface IPOActivityDates {
   refundsInitiationDate?: string;
   creditToDematDate?: string;
   listingDate?: string;
+  /** Actual price the stock listed at (present only for listed IPOs). */
+  listingPrice?: number;
 }
 
 export interface GmpHistoryItem {
@@ -153,4 +155,12 @@ export interface ProcessedSubscriptionData {
   rii: string;
   total: string;
   lastUpdated: string;
+}
+
+export interface SubscriptionHistoryItem {
+  date: string;
+  qib: number;
+  nii: number;
+  rii: number;
+  total: number;
 }
