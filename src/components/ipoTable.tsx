@@ -41,11 +41,8 @@ export default function IPOTable({ data }: IPOTableProps) {
                 return aOrder - bOrder;
             }
             
-            const aIsSME = a.ipoName.toLowerCase().includes('sme');
-            const bIsSME = b.ipoName.toLowerCase().includes('sme');
-            
-            if (aIsSME !== bIsSME) {
-                return aIsSME ? 1 : -1;
+            if (a.isSME !== b.isSME) {
+                return a.isSME ? 1 : -1;
             }
             
             return b.expectedProfit - a.expectedProfit;
@@ -59,7 +56,7 @@ export default function IPOTable({ data }: IPOTableProps) {
 
     const formatIPOName = (name: string) => {
         const maxLength = 25;
-        const cleanName = name.replace(/\s*(NSE\s*)?SME\s*/gi, '').trim();
+        const cleanName = name.trim();
         
         if (cleanName.length <= maxLength) {
             return cleanName;
@@ -145,7 +142,7 @@ export default function IPOTable({ data }: IPOTableProps) {
                         </thead>
                         <tbody className="divide-y divide-[#2d2d2d]">
                             {sortedData.map((ipo, index) => {
-                                const isSME = ipo.ipoName.toLowerCase().includes('sme');
+                                const isSME = ipo.isSME;
                                 const parsedEstListingValue = parseNumericValue(ipo.estListing.split(' ')[0]);
                                 const parsedGmpValue = parseNumericValue(ipo.gmpValue);
                                 

@@ -61,6 +61,9 @@ export async function GET(req: NextRequest) {
     const listingDate =
       normalize(findValue(['timetable_listing_dt', 'ipo_listing_date', 'listing_dt'])) || undefined;
 
+    // Actual price the stock listed at (populated only once an IPO has listed).
+    const listingPrice = parseNum(findValue(['listing_price']));
+
     return NextResponse.json(
       {
         biddingStartDate,
@@ -69,6 +72,7 @@ export async function GET(req: NextRequest) {
         refundsInitiationDate,
         creditToDematDate,
         listingDate,
+        listingPrice,
       },
       { status: 200 }
     );
@@ -80,6 +84,12 @@ export async function GET(req: NextRequest) {
 
 function escapeRegex(s: string) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function parseNum(v?: string): number | undefined {
+  if (!v) return undefined;
+  const n = parseFloat(v.replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
 function stripTimeISO(v?: string): string | '' {

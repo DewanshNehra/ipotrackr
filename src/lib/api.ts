@@ -1,4 +1,4 @@
-import { APIResponse, ProcessedIPOData, IPOGmpResponse, GmpHistoryItem, IPOSubscriptionResponse, ProcessedSubscriptionData } from '@/types/ipo';
+import { APIResponse, ProcessedIPOData, IPOGmpResponse, GmpHistoryItem, IPOSubscriptionResponse, ProcessedSubscriptionData, SubscriptionHistoryItem } from '@/types/ipo';
 import { processIPOData, processGmpHistoryData, processSubscriptionData } from './utils';
 import type { IPOActivityDates } from '@/types/ipo';
 
@@ -106,6 +106,31 @@ export async function fetchIPOSubscriptionData(ipoId: number): Promise<Processed
   } catch (error) {
     console.error('Error fetching subscription data:', error);
     return null;
+  }
+}
+
+export async function fetchIPOSubscriptionHistory(ipoId: number): Promise<SubscriptionHistoryItem[]> {
+  try {
+    const response = await fetch(`${SUBSCRIPTION_API_BASE_URL}/${ipoId}`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) return [];
+
+    const data: IPOSubscriptionResponse = await response.json();
+    if (data.msg !== 1 || !data.data?.ipoBiddingData) return [];
+
+    return data.data.ipoBiddingData.map(item => ({
+      date: item.bid_date.replace(/\s+\d{2}:\d{2}$/, ''),
+      qib: parseFloat(item.qib) || 0,
+      nii: parseFloat(item.nii) || 0,
+      rii: parseFloat(item.rii) || 0,
+      total: parseFloat(item.total) || 0,
+    }));
+  } catch {
+    return [];
   }
 }
 

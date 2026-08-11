@@ -20,7 +20,7 @@ export default function IPOSectionClient({ initialData }: IPOSectionClientProps)
         let result = initialData;
 
         if (!showSME) {
-            result = result.filter(ipo => !ipo.ipoName.toLowerCase().includes('sme'));
+            result = result.filter(ipo => !ipo.isSME);
         }
 
         if (searchTerm.trim()) {
@@ -49,11 +49,8 @@ export default function IPOSectionClient({ initialData }: IPOSectionClientProps)
     const categorizedIPOs = useMemo(() => {
         const sortByProfit = (ipos: ProcessedIPOData[]) => {
             return [...ipos].sort((a, b) => {
-                const aIsSME = a.ipoName.toLowerCase().includes('sme');
-                const bIsSME = b.ipoName.toLowerCase().includes('sme');
-                
-                if (aIsSME && !bIsSME) return 1;
-                if (!aIsSME && bIsSME) return -1;
+                if (a.isSME && !b.isSME) return 1;
+                if (!a.isSME && b.isSME) return -1;
                 
                 
                 return b.expectedProfit - a.expectedProfit;
@@ -101,11 +98,8 @@ export default function IPOSectionClient({ initialData }: IPOSectionClientProps)
         const config = categoryConfig[status];
 
         const sortedIPOs = [...ipos].sort((a, b) => {
-            const aIsSME = a.ipoName.toLowerCase().includes('sme');
-            const bIsSME = b.ipoName.toLowerCase().includes('sme');
-            
-            if (aIsSME && !bIsSME) return 1;
-            if (!aIsSME && bIsSME) return -1;
+            if (a.isSME && !b.isSME) return 1;
+            if (!a.isSME && b.isSME) return -1;
             
             return 0;
         });

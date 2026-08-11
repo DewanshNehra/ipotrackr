@@ -1,4 +1,10 @@
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 import { APIIPOObject, ProcessedIPOData, GmpHistoryItem, IPOGmpResponse, ChartData, IPOSubscriptionResponse, ProcessedSubscriptionData } from '@/types/ipo';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 export function processIPOData(apiData: APIIPOObject): ProcessedIPOData {
   const plainName = apiData["~ipo_name"]?.trim();
@@ -78,6 +84,8 @@ export function processIPOData(apiData: APIIPOObject): ProcessedIPOData {
   const issueSize = (apiData["IPO Size"] || '').replace(/&#8377;/g, '₹');
 
 
+  const isSME = (apiData["~IPO_Category"] || '').toLowerCase() === 'sme';
+
   return {
     id: apiData["~id"],
     ipoName,
@@ -99,7 +107,8 @@ export function processIPOData(apiData: APIIPOObject): ProcessedIPOData {
     creditToDematDate: undefined,
     listingDate: listStr || undefined,
     expectedProfit,
-    detailsUrl: `https://www.investorgain.com${apiData["~urlrewrite_folder_name"]}`
+    detailsUrl: `https://www.investorgain.com${apiData["~urlrewrite_folder_name"]}`,
+    isSME
   };
 }
 
@@ -195,7 +204,7 @@ export function formatDate(dateString: string): string {
 }
 
 export function formatIPOName(name: string, maxLength: number = 25): string {
-  const cleanName = name.replace(/\s*(NSE\s*)?SME\s*/gi, '').trim();
+  const cleanName = name.trim();
   return cleanName.length <= maxLength ? cleanName : `${cleanName.substring(0, maxLength).trim()}...`;
 }
 
@@ -220,11 +229,8 @@ export function sortIPOsByStatus(data: ProcessedIPOData[]): ProcessedIPOData[] {
       return aPriority - bPriority;
     }
     
-    const aIsSME = a.ipoName.toLowerCase().includes('sme');
-    const bIsSME = b.ipoName.toLowerCase().includes('sme');
-    
-    if (aIsSME !== bIsSME) {
-      return aIsSME ? 1 : -1;
+    if (a.isSME !== b.isSME) {
+      return a.isSME ? 1 : -1;
     }
     
     return b.expectedProfit - a.expectedProfit;
