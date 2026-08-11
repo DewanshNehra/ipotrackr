@@ -19,13 +19,12 @@ export default function IPOCard(props: ProcessedIPOData) {
         gmpPercentage,
         biddingStartDate,
         biddingEndDate,
+        isSME,
     } = props;
-    
-    const isSME = ipoName.toLowerCase().includes('sme');
     
     const formatIPOName = (name: string) => {
         const maxLength = 20;
-        const cleanName = name.replace(/\s*(NSE\s*)?SME\s*/gi, '').trim();
+        const cleanName = name.trim();
         
         if (cleanName.length <= maxLength) {
             return cleanName;

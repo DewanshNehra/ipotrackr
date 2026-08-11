@@ -56,7 +56,8 @@ export interface ProcessedIPOData {
   creditToDematDate?: string;
   listingDate?: string;
   expectedProfit: number;
-  detailsUrl: string; 
+  detailsUrl: string;
+  isSME: boolean;
 }
 
 export interface IPOActivityDates {
