@@ -1,10 +1,13 @@
-import { APIResponse, ProcessedIPOData, IPOGmpResponse, GmpHistoryItem, IPOSubscriptionResponse, ProcessedSubscriptionData } from '@/types/ipo';
+import { APIResponse, ProcessedIPOData, IPOGmpResponse, GmpHistoryItem, IPOSubscriptionResponse, ProcessedSubscriptionData, SubscriptionHistoryItem } from '@/types/ipo';
 import { processIPOData, processGmpHistoryData, processSubscriptionData } from './utils';
 import type { IPOActivityDates } from '@/types/ipo';
 
 const API_BASE_URL = 'https://webnodejs.investorgain.com/cloud/v2/report/data-read/331/1/7/2026/2026-27/0/all';
-const GMP_API_BASE_URL = 'https://webnodejs.investorgain.com/cloud/v2/ipo/ipo-gmp-read';
-const SUBSCRIPTION_API_BASE_URL = 'https://webnodejs.investorgain.com/cloud/v2/ipo/ipo-subscription-read';
+// Per-IPO GMP + subscription data are fetched through our own origin (see
+// src/app/api/gmp/[id] and src/app/api/subscription/[id]) so the browser avoids
+// upstream CORS/rate-limit rejections and responses can be cached server-side.
+const GMP_API_BASE_URL = '/api/gmp';
+const SUBSCRIPTION_API_BASE_URL = '/api/subscription';
 
 export async function fetchIPOData(): Promise<ProcessedIPOData[]> {
   try {
@@ -36,7 +39,7 @@ export async function fetchIPOData(): Promise<ProcessedIPOData[]> {
 
 export async function fetchIPOGmpData(ipoId: number): Promise<GmpHistoryItem[]> {
   try {
-    const response = await fetch(`${GMP_API_BASE_URL}/${ipoId}/true`, {
+    const response = await fetch(`${GMP_API_BASE_URL}/${ipoId}`, {
       headers: {
         'Content-Type': 'application/json',
       },
@@ -61,7 +64,7 @@ export async function fetchIPOGmpData(ipoId: number): Promise<GmpHistoryItem[]> 
 
 export async function fetchIPOGmpRawData(ipoId: number): Promise<IPOGmpResponse> {
   try {
-    const response = await fetch(`${GMP_API_BASE_URL}/${ipoId}/true`, {
+    const response = await fetch(`${GMP_API_BASE_URL}/${ipoId}`, {
       headers: {
         'Content-Type': 'application/json',
       },
@@ -106,6 +109,31 @@ export async function fetchIPOSubscriptionData(ipoId: number): Promise<Processed
   } catch (error) {
     console.error('Error fetching subscription data:', error);
     return null;
+  }
+}
+
+export async function fetchIPOSubscriptionHistory(ipoId: number): Promise<SubscriptionHistoryItem[]> {
+  try {
+    const response = await fetch(`${SUBSCRIPTION_API_BASE_URL}/${ipoId}`, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) return [];
+
+    const data: IPOSubscriptionResponse = await response.json();
+    if (data.msg !== 1 || !data.data?.ipoBiddingData) return [];
+
+    return data.data.ipoBiddingData.map(item => ({
+      date: item.bid_date.replace(/\s+\d{2}:\d{2}$/, ''),
+      qib: parseFloat(item.qib) || 0,
+      nii: parseFloat(item.nii) || 0,
+      rii: parseFloat(item.rii) || 0,
+      total: parseFloat(item.total) || 0,
+    }));
+  } catch {
+    return [];
   }
 }
 

@@ -1,18 +1,37 @@
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
 import { APIIPOObject, ProcessedIPOData, GmpHistoryItem, IPOGmpResponse, ChartData, IPOSubscriptionResponse, ProcessedSubscriptionData } from '@/types/ipo';
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 export function processIPOData(apiData: APIIPOObject): ProcessedIPOData {
   const plainName = apiData["~ipo_name"]?.trim();
   const nameMatch = apiData.Name?.match(/title="([^"]+)"/);
   const ipoName = plainName || (nameMatch ? nameMatch[1] : 'Unknown IPO');
 
+  // Upstream now exposes an explicit status code (~ipo_status1):
+  //   O = open, U = upcoming, C = closed (allotment pending), LN/LP = listed.
+  // Prefer it. Fall back to the legacy badge class parsed from the Name HTML —
+  // note the badge order changed (category badge, always bg-secondary, now comes
+  // FIRST), so that fallback is best-effort only.
+  const statusCode = (apiData["~ipo_status1"] || '').trim().toUpperCase();
+  const hasStatusCode = ['O', 'U', 'C', 'LN', 'LP'].includes(statusCode);
+
   const statusMatch = apiData.Name?.match(/bg-(\w+)/);
   const badgeClass = statusMatch ? statusMatch[1] : 'secondary';
 
-  let status: 'open' | 'upcoming' | 'pending' | 'listed' = 'pending';
-  if (badgeClass === 'success') status = 'open';
+  let status: 'open' | 'upcoming' | 'pending' | 'listed';
+  if (statusCode === 'O') status = 'open';
+  else if (statusCode === 'U') status = 'upcoming';
+  else if (statusCode === 'C') status = 'pending';
+  else if (statusCode === 'LN' || statusCode === 'LP') status = 'listed';
+  else if (badgeClass === 'success') status = 'open';
   else if (badgeClass === 'warning' || badgeClass === 'info') status = 'upcoming';
   else if (badgeClass === 'secondary' || badgeClass === 'light') status = 'listed';
   else if (badgeClass === 'primary' || badgeClass === 'dark') status = 'pending';
+  else status = 'pending';
 
 
   const currentDate = new Date();
@@ -27,7 +46,7 @@ export function processIPOData(apiData: APIIPOObject): ProcessedIPOData {
   const hasClose = !!closeStr;
   const hasList = !!listStr;
 
-  if (hasOpen && hasClose) {
+  if (!hasStatusCode && hasOpen && hasClose) {
     const openDate = new Date(openStr);
     openDate.setHours(0, 0, 0, 0);
     const closeDate = new Date(closeStr);
@@ -78,6 +97,8 @@ export function processIPOData(apiData: APIIPOObject): ProcessedIPOData {
   const issueSize = (apiData["IPO Size"] || '').replace(/&#8377;/g, '₹');
 
 
+  const isSME = (apiData["~IPO_Category"] || '').toLowerCase() === 'sme';
+
   return {
     id: apiData["~id"],
     ipoName,
@@ -99,7 +120,8 @@ export function processIPOData(apiData: APIIPOObject): ProcessedIPOData {
     creditToDematDate: undefined,
     listingDate: listStr || undefined,
     expectedProfit,
-    detailsUrl: `https://www.investorgain.com${apiData["~urlrewrite_folder_name"]}`
+    detailsUrl: `https://www.investorgain.com${apiData["~urlrewrite_folder_name"]}`,
+    isSME
   };
 }
 
@@ -114,46 +136,103 @@ export function formatDateFull(dateString?: string): string {
 }
 
 export function processGmpHistoryData(gmpResponse: IPOGmpResponse): GmpHistoryItem[] {
-  if (!gmpResponse.ipoGmpTable) {
+  // Preferred source: the structured `ipoGmpData` array. Upstream returns it
+  // newest-first and it is richer/more stable than scraping the HTML table.
+  const rows = gmpResponse.ipoGmpData;
+  if (Array.isArray(rows) && rows.length > 0) {
+    const extracted = rows.map((item): GmpHistoryItem => {
+      const movement: 'up' | 'down' | 'none' =
+        item.up_down_status === 'U' ? 'up' :
+        item.up_down_status === 'D' ? 'down' : 'none';
+
+      const gmp = parseFloat(item.gmp);
+      const estimatedListing = parseFloat(item.estimated_listing_price);
+      const percentage = item.gmp_percent_raw
+        ? `${item.gmp_percent_raw}%`
+        : (item.gmp_percent_calc?.match(/\(([^)]+)\)/)?.[1] || '0%');
+
+      return {
+        date: formatGmpDate(item.gmp_date),
+        price: formatCurrency(item.max_ipo_price),
+        gmp: Number.isFinite(gmp) ? gmp : 0,
+        estimatedListing: Number.isFinite(estimatedListing) ? estimatedListing : 0,
+        percentage,
+        estimatedProfit: formatCurrency(item.est_profit),
+        movement,
+        lastUpdated: item.last_updated_ex_year || item.last_updated || '',
+      };
+    });
+
+    // Upstream order is newest-first; charts/tables expect oldest-first.
+    return extracted.reverse();
+  }
+
+  // Fallback: parse the legacy HTML table when the structured array is absent.
+  return parseGmpHistoryTable(gmpResponse.ipoGmpTable);
+}
+
+const MONTH_ABBR = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/** "18-10-2026" → "18 Oct" (the compact label the UI expects). */
+function formatGmpDate(gmpDate?: string): string {
+  if (!gmpDate) return '';
+  const m = gmpDate.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (!m) return gmpDate;
+  const day = parseInt(m[1], 10);
+  const monthIdx = parseInt(m[2], 10) - 1;
+  if (monthIdx < 0 || monthIdx > 11) return gmpDate;
+  return `${day} ${MONTH_ABBR[monthIdx]}`;
+}
+
+/** "10815" / "₹1,932" → "₹10,815" (Indian digit grouping), or '' when empty. */
+function formatCurrency(value?: string): string {
+  if (value === undefined || value === null || value === '') return '';
+  const n = parseFloat(String(value).replace(/[^0-9.-]/g, ''));
+  return Number.isFinite(n) ? `₹${n.toLocaleString('en-IN')}` : '';
+}
+
+function parseGmpHistoryTable(ipoGmpTable?: string): GmpHistoryItem[] {
+  if (!ipoGmpTable || typeof DOMParser === 'undefined') {
     return [];
   }
 
   const parser = new DOMParser();
-  const htmlDoc = parser.parseFromString(gmpResponse.ipoGmpTable, 'text/html');
+  const htmlDoc = parser.parseFromString(ipoGmpTable, 'text/html');
   const rows = htmlDoc.querySelectorAll('tbody tr');
-  
+
   const extractedData: GmpHistoryItem[] = [];
-  
+
   rows.forEach(row => {
-    const gmpDateCell = row.querySelector('[data-title="GMP Date"]');
+    // "GMP Date" was renamed to "GMP Date & Time" upstream.
+    const gmpDateCell = row.querySelector('[data-title="GMP Date & Time"], [data-title="GMP Date"]');
     const priceCell = row.querySelector('[data-title="IPO Price"]');
     const gmpCell = row.querySelector('[data-title="GMP"]');
     const estListingCell = row.querySelector('[data-title="Est. Listing Price"]');
     const estProfitCell = row.querySelector('[data-title="Est. Profit"]');
     const lastUpdatedCell = row.querySelector('[data-title="Last Updated"]');
-    
-    if (!gmpDateCell || !priceCell || !gmpCell || !estListingCell) return;
-    
+
+    if (!gmpDateCell || !gmpCell || !estListingCell) return;
+
     let movement: 'up' | 'down' | 'none' = 'none';
     if (gmpCell.innerHTML.includes('trend-up')) {
       movement = 'up';
     } else if (gmpCell.innerHTML.includes('trend-dn')) {
       movement = 'down';
     }
-    
-    const gmpValue = gmpCell.textContent?.match(/₹(\d+)/)?.[1] || 
-                    gmpCell.textContent?.match(/\u20B9(\d+)/)?.[1] || 
+
+    const gmpValue = gmpCell.textContent?.match(/₹(\d+)/)?.[1] ||
+                    gmpCell.textContent?.match(/\u20B9(\d+)/)?.[1] ||
                     gmpCell.textContent?.match(/(\d+)/)?.[1] || '0';
-    
+
     const estListingText = estListingCell.textContent || '';
-    const estListingValue = estListingText.match(/₹(\d+)/)?.[1] || 
-                           estListingText.match(/\u20B9(\d+)/)?.[1] || 
+    const estListingValue = estListingText.match(/₹(\d+)/)?.[1] ||
+                           estListingText.match(/\u20B9(\d+)/)?.[1] ||
                            estListingText.match(/(\d+)/)?.[1] || '0';
     const estListingPercentage = estListingText.match(/\(([^)]+)\)/)?.[1] || '0%';
-    
+
     extractedData.push({
       date: (gmpDateCell.textContent || '').trim().split(' ')[0],
-      price: (priceCell.textContent || '').trim(),
+      price: (priceCell?.textContent || '').trim(),
       gmp: parseInt(gmpValue, 10),
       estimatedListing: parseInt(estListingValue, 10),
       percentage: estListingPercentage,
@@ -162,7 +241,7 @@ export function processGmpHistoryData(gmpResponse: IPOGmpResponse): GmpHistoryIt
       lastUpdated: (lastUpdatedCell?.textContent || '').trim()
     });
   });
-  
+
   return extractedData.reverse();
 }
 
@@ -195,7 +274,7 @@ export function formatDate(dateString: string): string {
 }
 
 export function formatIPOName(name: string, maxLength: number = 25): string {
-  const cleanName = name.replace(/\s*(NSE\s*)?SME\s*/gi, '').trim();
+  const cleanName = name.trim();
   return cleanName.length <= maxLength ? cleanName : `${cleanName.substring(0, maxLength).trim()}...`;
 }
 
@@ -220,11 +299,8 @@ export function sortIPOsByStatus(data: ProcessedIPOData[]): ProcessedIPOData[] {
       return aPriority - bPriority;
     }
     
-    const aIsSME = a.ipoName.toLowerCase().includes('sme');
-    const bIsSME = b.ipoName.toLowerCase().includes('sme');
-    
-    if (aIsSME !== bIsSME) {
-      return aIsSME ? 1 : -1;
+    if (a.isSME !== b.isSME) {
+      return a.isSME ? 1 : -1;
     }
     
     return b.expectedProfit - a.expectedProfit;
