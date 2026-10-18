@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { ProcessedIPOData, GmpHistoryItem, ProcessedSubscriptionData, IPOActivityDates, SubscriptionHistoryItem } from '@/types/ipo';
 import { BsXLg, BsArrowUp, BsArrowDown, BsBarChart } from 'react-icons/bs';
 import { fetchIPOGmpData, fetchIPOSubscriptionData, fetchIPOSubscriptionHistory, fetchIPOActivityDates } from '@/lib/api';
@@ -14,6 +14,7 @@ import { AreaChart } from '@/components/charts/area-chart';
 import { Area } from '@/components/charts/area';
 import { YAxisLabels } from '@/components/charts/y-axis-labels';
 import SubscriptionGauge from './subscription-gauge';
+import { analytics } from '@/lib/analytics';
 
 interface IPODetailModalProps {
   ipoId: number;
@@ -28,6 +29,20 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
   const [subscriptionData, setSubscriptionData] = useState<ProcessedSubscriptionData | null>(null);
   const [subscriptionHistory, setSubscriptionHistory] = useState<SubscriptionHistoryItem[]>([]);
   const [activityDates, setActivityDates] = useState<IPOActivityDates | null>(null);
+  const openTimeRef = useRef<number>(Date.now());
+
+  // Track modal open
+  useEffect(() => {
+    analytics.ipoModalOpen(ipoData.ipoName);
+    openTimeRef.current = Date.now();
+  }, [ipoData.ipoName]);
+
+  // Track modal close with time spent
+  const handleClose = () => {
+    const timeSpent = Math.floor((Date.now() - openTimeRef.current) / 1000);
+    analytics.ipoModalClose(ipoData.ipoName, timeSpent);
+    onClose();
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -141,7 +156,7 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
     : 0;
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={handleClose}>
       <div className="bg-[#1A1A1A] border border-[#2d2d2d] rounded-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto modal-scrollbar" onClick={e => e.stopPropagation()}>
         {/* Modal header */}
         <div className="p-4 border-b border-[#2d2d2d] flex justify-between items-center sticky top-0 bg-[#1A1A1A] z-10">
@@ -155,7 +170,7 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
             >
               More Details
             </a>
-            <button onClick={onClose} className="p-2 hover:bg-[#252525] rounded-full transition-colors">
+            <button onClick={handleClose} className="p-2 hover:bg-[#252525] rounded-full transition-colors">
               <BsXLg className="text-gray-400" />
             </button>
           </div>

@@ -2,9 +2,15 @@ import React, { useState } from 'react';
 import { ProcessedIPOData } from '@/types/ipo';
 import IPODetailModal from './ipoDetailModal';
 import Sparkline from './sparkline';
+import { analytics } from '@/lib/analytics';
 
 export default function IPOCard(props: ProcessedIPOData) {
     const [showModal, setShowModal] = useState(false);
+
+    const handleCardClick = () => {
+        analytics.ipoCardClick(props.ipoName, props.status, props.gmpValue);
+        setShowModal(true);
+    };
     const {
         id,
         ipoName,
@@ -55,7 +61,7 @@ export default function IPOCard(props: ProcessedIPOData) {
         <>
             <article 
                 className="bg-[#1A1A1A] backdrop-blur-[1px] border border-[#2d2d2d] rounded-xl p-6 w-full max-w-md cursor-pointer hover:border-[#00FF7B]/40 hover:shadow-lg hover:shadow-[#00FF7B]/10 transition-all"
-                onClick={() => setShowModal(true)}
+                onClick={handleCardClick}
                 itemScope
                 itemType="https://schema.org/FinancialProduct"
             >
