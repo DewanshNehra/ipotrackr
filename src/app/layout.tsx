@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Geist } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -49,7 +50,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'IPO GMP Tracker - Live Grey Market Premium',
     description: 'Real-time IPO GMP tracking with subscription data and investment analysis',
-    images: ['https://ipotrackr.davincin.eu.org/og-image.jpg'], // Same image
+    images: ['https://ipotrackr.davincin.eu.org/og-image.jpg'],
     creator: '@dewanshnehra',
   },
   verification: {
@@ -67,6 +68,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const umamiWebsiteId = process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID;
+  const umamiScriptUrl = process.env.NEXT_PUBLIC_UMAMI_SCRIPT_URL;
+  const gaId = process.env.NEXT_PUBLIC_GA_ID;
+
   return (
     <html lang="en" dir="ltr" className={cn("font-sans", geist.variable)}>
       <head>
@@ -123,6 +128,38 @@ export default function RootLayout({
             })
           }}
         />
+        
+        {/* Google Analytics (GA4) - only injects if NEXT_PUBLIC_GA_ID is set */}
+        {gaId && (
+          <>
+            <Script
+              strategy="afterInteractive"
+              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+            />
+            <Script
+              id="ga-config"
+              strategy="afterInteractive"
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${gaId}');
+                `
+              }}
+            />
+          </>
+        )}
+
+        {/* Umami Analytics - only injects if BOTH env vars are set */}
+        {umamiWebsiteId && umamiScriptUrl && (
+          <Script
+            defer
+            src={umamiScriptUrl}
+            data-website-id={umamiWebsiteId}
+            strategy="afterInteractive"
+          />
+        )}
       </head>
       <body className={`${spaceGrotesk.variable} font-sans antialiased`}>
         {children}

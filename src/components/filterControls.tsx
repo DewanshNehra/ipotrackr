@@ -1,7 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { BsSearch, BsToggleOff, BsToggleOn } from 'react-icons/bs';
+import { analytics } from '@/lib/analytics';
+import { debounce } from '@/lib/utils';
 
 interface FilterControlsClientProps {
     searchTerm: string;
@@ -16,6 +18,27 @@ export default function FilterControlsClient({
     showSME, 
     onSMEToggle 
 }: FilterControlsClientProps) {
+    // Debounced search tracking to avoid too many events
+    const trackSearch = useMemo(
+        () => debounce((term: string) => {
+            if (term.length >= 2) {
+                analytics.searchUsed(term);
+            }
+        }, 1000),
+        []
+    );
+
+    const handleSearchChange = (value: string) => {
+        onSearchChange(value);
+        trackSearch(value);
+    };
+
+    const handleSMEToggle = () => {
+        const newValue = !showSME;
+        analytics.smeFilterToggle(newValue);
+        onSMEToggle(newValue);
+    };
+
     return (
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
             {/* Search */}
@@ -27,7 +50,7 @@ export default function FilterControlsClient({
                     type="text"
                     placeholder="Search IPOs..."
                     value={searchTerm}
-                    onChange={(e) => onSearchChange(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="block w-full pl-10 pr-3 py-2 border border-[#2d2d2d] rounded-lg bg-[#1A1A1A] text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#00FF7B] focus:border-transparent"
                 />
             </div>
@@ -36,7 +59,7 @@ export default function FilterControlsClient({
             <div className="flex items-center gap-3">
                 <span className="text-gray-400 text-sm">Show SME IPOs:</span>
                 <button
-                    onClick={() => onSMEToggle(!showSME)}
+                    onClick={handleSMEToggle}
                     className={`transition-colors ${showSME ? 'text-[#00FF7B]' : 'text-gray-400'}`}
                 >
                     {showSME ? <BsToggleOn size={24} /> : <BsToggleOff size={24} />}
