@@ -1,16 +1,22 @@
-// Umami analytics utility for type-safe event tracking
+// Analytics utility for Umami and Google Analytics (GA4)
 
 declare global {
   interface Window {
     umami?: {
       track: (eventName: string, eventData?: Record<string, string | number | boolean | undefined>) => void;
     };
+    gtag?: (command: string, action: string, params?: Record<string, string | number | boolean | undefined>) => void;
   }
 }
 
 export const trackEvent = (eventName: string, eventData?: Record<string, string | number | boolean | undefined>) => {
-  if (typeof window !== 'undefined' && window.umami) {
-    window.umami.track(eventName, eventData);
+  if (typeof window !== 'undefined') {
+    if (window.umami) {
+      window.umami.track(eventName, eventData);
+    }
+    if (window.gtag) {
+      window.gtag('event', eventName, eventData);
+    }
   }
 };
 

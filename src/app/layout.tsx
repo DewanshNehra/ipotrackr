@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Space_Grotesk, Geist } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 
@@ -75,6 +74,26 @@ export default function RootLayout({
   return (
     <html lang="en" dir="ltr" className={cn("font-sans", geist.variable)}>
       <head>
+        {/* Google tag (gtag.js) - immediately after <head> */}
+        {gaId && (
+          <>
+            <script
+              async
+              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+            />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${gaId}');
+                `,
+              }}
+            />
+          </>
+        )}
+
         <meta name="google-site-verification" content="b0Icbvcfd90gpkWWvwtW-nFGLGMTPKJxzIwTp77dd60" />
         <link rel="canonical" href="https://ipotrackr.davincin.eu.org" />
         
@@ -98,7 +117,7 @@ export default function RootLayout({
         
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="icon" href="/logo.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/logo.png" />
+        <link rel="apple-touch-icon" href="/icon-192.png" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#00FF7B" />
         <meta name="msapplication-TileColor" content="#00FF7B" />
@@ -128,36 +147,13 @@ export default function RootLayout({
             })
           }}
         />
-        
-        {/* Google Analytics (GA4) - only injects if NEXT_PUBLIC_GA_ID is set */}
-        {gaId && (
-          <>
-            <Script
-              strategy="afterInteractive"
-              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
-            />
-            <Script
-              id="ga-config"
-              strategy="afterInteractive"
-              dangerouslySetInnerHTML={{
-                __html: `
-                  window.dataLayer = window.dataLayer || [];
-                  function gtag(){dataLayer.push(arguments);}
-                  gtag('js', new Date());
-                  gtag('config', '${gaId}');
-                `
-              }}
-            />
-          </>
-        )}
 
         {/* Umami Analytics - only injects if BOTH env vars are set */}
         {umamiWebsiteId && umamiScriptUrl && (
-          <Script
+          <script
             defer
             src={umamiScriptUrl}
             data-website-id={umamiWebsiteId}
-            strategy="afterInteractive"
           />
         )}
       </head>

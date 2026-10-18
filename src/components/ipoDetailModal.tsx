@@ -29,7 +29,7 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
   const [subscriptionData, setSubscriptionData] = useState<ProcessedSubscriptionData | null>(null);
   const [subscriptionHistory, setSubscriptionHistory] = useState<SubscriptionHistoryItem[]>([]);
   const [activityDates, setActivityDates] = useState<IPOActivityDates | null>(null);
-  const openTimeRef = useRef<number>(Date.now());
+  const openTimeRef = useRef<number>(0);
 
   // Track modal open
   useEffect(() => {
@@ -39,7 +39,7 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
 
   // Track modal close with time spent
   const handleClose = () => {
-    const timeSpent = Math.floor((Date.now() - openTimeRef.current) / 1000);
+    const timeSpent = openTimeRef.current ? Math.floor((Date.now() - openTimeRef.current) / 1000) : 0;
     analytics.ipoModalClose(ipoData.ipoName, timeSpent);
     onClose();
   };
