@@ -1,14 +1,19 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { ProcessedIPOData, GmpHistoryItem, ProcessedSubscriptionData, IPOActivityDates } from '@/types/ipo';
-import { Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler, TooltipItem } from 'chart.js';
+import React, { useEffect, useState, useMemo } from 'react';
+import { ProcessedIPOData, GmpHistoryItem, ProcessedSubscriptionData, IPOActivityDates, SubscriptionHistoryItem } from '@/types/ipo';
 import { BsXLg, BsArrowUp, BsArrowDown, BsBarChart } from 'react-icons/bs';
-import { fetchIPOGmpData, fetchIPOSubscriptionData, fetchIPOActivityDates } from '@/lib/api';
-import { createChartData, formatDateFull, computeActivityProgress, isMilestoneDone } from '@/lib/utils';
-
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
+import { fetchIPOGmpData, fetchIPOSubscriptionData, fetchIPOSubscriptionHistory, fetchIPOActivityDates } from '@/lib/api';
+import { formatDateFull, computeActivityProgress, isMilestoneDone } from '@/lib/utils';
+import { LineChart } from '@/components/charts/line-chart';
+import { Line } from '@/components/charts/line';
+import { Grid } from '@/components/charts/grid';
+import { XAxis } from '@/components/charts/x-axis';
+import { ChartTooltip } from '@/components/charts/tooltip';
+import { AreaChart } from '@/components/charts/area-chart';
+import { Area } from '@/components/charts/area';
+import { YAxisLabels } from '@/components/charts/y-axis-labels';
+import SubscriptionGauge from './subscription-gauge';
 
 interface IPODetailModalProps {
   ipoId: number;
@@ -21,20 +26,23 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
   const [error, setError] = useState<string | null>(null);
   const [gmpHistory, setGmpHistory] = useState<GmpHistoryItem[]>([]);
   const [subscriptionData, setSubscriptionData] = useState<ProcessedSubscriptionData | null>(null);
+  const [subscriptionHistory, setSubscriptionHistory] = useState<SubscriptionHistoryItem[]>([]);
   const [activityDates, setActivityDates] = useState<IPOActivityDates | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        
-        const [gmpData, subData] = await Promise.all([
+
+        const [gmpData, subData, subHistory] = await Promise.all([
           fetchIPOGmpData(ipoId),
-          fetchIPOSubscriptionData(ipoId)
+          fetchIPOSubscriptionData(ipoId),
+          fetchIPOSubscriptionHistory(ipoId)
         ]);
-        
+
         setGmpHistory(gmpData);
         setSubscriptionData(subData);
+        setSubscriptionHistory(subHistory);
         setError(null);
       } catch (err) {
         console.error('Error loading data:', err);
@@ -43,7 +51,7 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
         setIsLoading(false);
       }
     };
-    
+
     loadData();
   }, [ipoId]);
 
@@ -55,70 +63,54 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
         const parsed = await fetchIPOActivityDates(ipoData.detailsUrl);
         if (!cancelled && parsed) setActivityDates(parsed);
       } catch (e) {
-
         console.warn('Activity dates parse failed:', e);
       }
     })();
     return () => { cancelled = true; };
   }, [ipoData?.detailsUrl]);
 
-  const chartData = createChartData(gmpHistory);
   const tableData = [...gmpHistory].reverse();
-  
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        position: 'top' as const,
-        labels: {
-          color: 'white',
-          font: {
-            family: 'var(--font-space-grotesk)',
-          }
-        }
-      },
-      tooltip: {
-        backgroundColor: 'rgba(26, 26, 26, 0.95)',
-        titleColor: 'white',
-        bodyColor: 'white',
-        borderColor: '#2d2d2d',
-        borderWidth: 1,
-        padding: 12,
-        boxPadding: 6,
-        callbacks: {
-          label: function(context: TooltipItem<'line'>) {
-            const dataIndex = context.dataIndex;
-            
-            return [
-              `GMP: ₹${gmpHistory[dataIndex]?.gmp || 0}`,
-              `Estimated Profit: ${gmpHistory[dataIndex]?.estimatedProfit || '₹0'}`,
-              `Percentage: ${gmpHistory[dataIndex]?.percentage || '0%'}`
-            ];
-          }
-        }
-      }
-    },
-    scales: {
-      x: {
-        ticks: {
-          color: 'rgb(156, 163, 175)',
-          font: { family: 'var(--font-space-grotesk)' }
-        },
-        grid: { display: false },
-        border: { color: '#2d2d2d' }
-      },
-      y: {
-        ticks: {
-          color: 'rgb(156, 163, 175)',
-          font: { family: 'var(--font-space-grotesk)' },
-          callback: function(value: string | number) { return '₹' + value; }
-        },
-        grid: { color: 'rgba(45, 45, 45, 0.5)', tickLength: 0 },
-        border: { color: '#2d2d2d' }
-      }
-    }
-  };
+
+  const areaChartData = useMemo(() => {
+    return gmpHistory.map((item, index) => ({
+      date: new Date(2026, 0, index + 1),
+      gmp: item.gmp,
+      estListing: item.estimatedListing,
+      ipoPrice: ipoData.price,
+    }));
+  }, [gmpHistory, ipoData.price]);
+
+  const stackedSubscriptionData = useMemo(() => {
+    return subscriptionHistory.map((item, index) => ({
+      date: new Date(2026, 0, index + 1),
+      qibCum: item.qib,
+      niiCum: item.qib + item.nii,
+      riiCum: item.qib + item.nii + item.rii,
+    }));
+  }, [subscriptionHistory]);
+
+  const gmpColor = ipoData.expectedProfit >= 0 ? '#00FF7B' : '#FF3F42';
+
+  // Listed-IPO performance: GMP prediction vs the actual listing outcome.
+  const listingPerf = useMemo(() => {
+    if (ipoData.status !== 'listed') return null;
+    const issue = ipoData.price;
+    const actual = activityDates?.listingPrice;
+    if (!issue || issue <= 0 || !actual || actual <= 0) return null;
+
+    const estListing = ipoData.estListingValue > 0 ? ipoData.estListingValue : issue;
+    const actualGainPct = ((actual - issue) / issue) * 100;
+    const estGainPct = ((estListing - issue) / issue) * 100;
+
+    // How the GMP-implied estimate compared to reality (±2% = "on the money").
+    const diff = estListing > 0 ? (actual - estListing) / estListing : 0;
+    let verdict: { label: string; color: string };
+    if (diff >= 0.02) verdict = { label: 'GMP was conservative — listed higher', color: '#00FF7B' };
+    else if (diff <= -0.02) verdict = { label: 'GMP was optimistic — listed lower', color: '#FF3F42' };
+    else verdict = { label: 'GMP called it — close to estimate', color: '#3b82f6' };
+
+    return { issue, estListing, actual, actualGainPct, estGainPct, verdict };
+  }, [ipoData.status, ipoData.price, ipoData.estListingValue, activityDates?.listingPrice]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -132,7 +124,7 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = 'auto'; };
   }, []);
-  
+
   const rawActivityItems = [
     { key: 'open', label: 'IPO Open', date: activityDates?.biddingStartDate || ipoData.biddingStartDate },
     { key: 'close', label: 'IPO Close', date: activityDates?.biddingEndDate || ipoData.biddingEndDate },
@@ -144,7 +136,6 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
 
   const activityItems = rawActivityItems.filter(i => !!i.date);
 
-  // Progress based on visible items with continuous interpolation (IST-aware)
   const progressPercent = activityItems.length > 1
     ? computeActivityProgress(activityItems)
     : 0;
@@ -156,10 +147,10 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
         <div className="p-4 border-b border-[#2d2d2d] flex justify-between items-center sticky top-0 bg-[#1A1A1A] z-10">
           <h2 className="text-xl font-semibold">{ipoData.ipoName} - Details & Analysis</h2>
           <div className="flex items-center gap-3">
-            <a 
-              href={ipoData.detailsUrl} 
-              target="_blank" 
-              rel="noopener noreferrer" 
+            <a
+              href={ipoData.detailsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-sm text-[#00FF7B] border border-[#00FF7B] hover:bg-[#00FF7B] hover:text-black transition-colors px-4 py-1 rounded-md"
             >
               More Details
@@ -169,24 +160,21 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
             </button>
           </div>
         </div>
-        
+
         {/* Modal content */}
         <div className="p-6">
           {/* Summary cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            {/* Current GMP */}
             <div className="bg-[#252525] p-4 rounded-lg border border-[#2d2d2d]">
               <div className="text-gray-400 text-sm mb-1">Current GMP</div>
               <div className="text-2xl font-bold text-[#00FF7B]">₹{ipoData.gmpValue}</div>
               <div className="text-sm">{ipoData.gmpPercentage} of issue price</div>
             </div>
-            {/* Issue Price */}
             <div className="bg-[#252525] p-4 rounded-lg border border-[#2d2d2d]">
               <div className="text-gray-400 text-sm mb-1">Issue Price</div>
               <div className="text-2xl font-bold">₹{ipoData.price}</div>
               <div className="text-sm">Lot Size: {ipoData.lotSize}</div>
             </div>
-            {/* Expected Profit */}
             <div className="bg-[#252525] p-4 rounded-lg border border-[#2d2d2d]">
               <div className="text-gray-400 text-sm mb-1">Expected Profit</div>
               <div className={`text-2xl font-bold ${ipoData.expectedProfit >= 0 ? 'text-[#00FF7B]' : 'text-red-400'}`}>
@@ -194,7 +182,6 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
               </div>
               <div className="text-sm">Per lot</div>
             </div>
-            {/* Total Subscription */}
             <div className="bg-[#252525] p-4 rounded-lg border border-[#2d2d2d]">
               <div className="text-gray-400 text-sm mb-1">Total Subscription</div>
               {subscriptionData ? (
@@ -208,7 +195,61 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
             </div>
           </div>
 
-          {/* Subscription breakdown (unchanged) */}
+          {/* Listing performance — GMP prediction vs actual (listed IPOs only) */}
+          {listingPerf && (
+            <div className="mb-8 bg-[#0F0F0F] p-4 rounded-xl border border-[#2d2d2d]">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <h3 className="text-lg font-medium text-white">Listing Performance</h3>
+                <span
+                  className="text-xs font-medium px-2.5 py-1 rounded-full"
+                  style={{ color: listingPerf.verdict.color, backgroundColor: `${listingPerf.verdict.color}1a` }}
+                >
+                  {listingPerf.verdict.label}
+                </span>
+              </div>
+
+              <div className="flex items-stretch gap-2 md:gap-3">
+                <div className="flex-1 bg-[#1A1A1A] p-3 rounded-lg border border-[#2d2d2d] text-center">
+                  <div className="text-gray-400 text-xs mb-1">Issue Price</div>
+                  <div className="text-lg md:text-xl font-bold text-white">₹{listingPerf.issue}</div>
+                </div>
+
+                <div className="flex items-center text-gray-600 text-lg">→</div>
+
+                <div className="flex-1 bg-[#1A1A1A] p-3 rounded-lg border border-[#2d2d2d] text-center">
+                  <div className="text-gray-400 text-xs mb-1">Est. Listing (GMP)</div>
+                  <div className="text-lg md:text-xl font-bold text-white">₹{listingPerf.estListing}</div>
+                  <div className={`text-xs ${listingPerf.estGainPct >= 0 ? 'text-[#00FF7B]' : 'text-[#FF3F42]'}`}>
+                    {listingPerf.estGainPct >= 0 ? '+' : ''}{listingPerf.estGainPct.toFixed(1)}%
+                  </div>
+                </div>
+
+                <div className="flex items-center text-gray-600 text-lg">→</div>
+
+                <div
+                  className="flex-1 p-3 rounded-lg border text-center"
+                  style={{
+                    borderColor: `${listingPerf.actualGainPct >= 0 ? '#00FF7B' : '#FF3F42'}59`,
+                    backgroundColor: `${listingPerf.actualGainPct >= 0 ? '#00FF7B' : '#FF3F42'}12`,
+                  }}
+                >
+                  <div className="text-gray-400 text-xs mb-1">Actual Listing</div>
+                  <div className={`text-lg md:text-xl font-bold ${listingPerf.actualGainPct >= 0 ? 'text-[#00FF7B]' : 'text-[#FF3F42]'}`}>
+                    ₹{listingPerf.actual}
+                  </div>
+                  <div className={`text-xs ${listingPerf.actualGainPct >= 0 ? 'text-[#00FF7B]' : 'text-[#FF3F42]'}`}>
+                    {listingPerf.actualGainPct >= 0 ? '+' : ''}{listingPerf.actualGainPct.toFixed(1)}%
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 text-xs text-gray-500">
+                Listing gain is measured against the issue price. Live/current price isn&apos;t tracked by this source.
+              </div>
+            </div>
+          )}
+
+          {/* Subscription breakdown cards + bar chart */}
           {subscriptionData && (
             <div className="mb-8 bg-[#0F0F0F] p-4 rounded-xl border border-[#2d2d2d]">
               <div className="flex items-center gap-2 mb-4">
@@ -216,27 +257,61 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
                 <h3 className="text-lg font-medium text-white">Live Subscription Status</h3>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2d2d2d]">
-                  <div className="text-gray-400 text-sm">QIB</div>
-                  <div className="text-xl font-bold text-blue-400">{subscriptionData.qib}</div>
-                  <div className="text-xs text-gray-500">Institutional</div>
+                <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2d2d2d] flex flex-col items-center">
+                  <div className="text-gray-400 text-sm self-start">QIB</div>
+                  <SubscriptionGauge value={parseFloat(subscriptionData.qib) || 0} label="Institutional" color="#3b82f6" size={64} />
                 </div>
-                <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2d2d2d]">
-                  <div className="text-gray-400 text-sm">NII</div>
-                  <div className="text-xl font-bold text-purple-400">{subscriptionData.nii}</div>
-                  <div className="text-xs text-gray-500">Non-Institutional</div>
+                <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2d2d2d] flex flex-col items-center">
+                  <div className="text-gray-400 text-sm self-start">NII</div>
+                  <SubscriptionGauge value={parseFloat(subscriptionData.nii) || 0} label="Non-Institutional" color="#a855f7" size={64} />
                 </div>
-                <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2d2d2d]">
-                  <div className="text-gray-400 text-sm">RII</div>
-                  <div className="text-xl font-bold text-orange-400">{subscriptionData.rii}</div>
-                  <div className="text-xs text-gray-500">Retail</div>
+                <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2d2d2d] flex flex-col items-center">
+                  <div className="text-gray-400 text-sm self-start">RII</div>
+                  <SubscriptionGauge value={parseFloat(subscriptionData.rii) || 0} label="Retail" color="#f97316" size={64} />
                 </div>
-                <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2d2d2d]">
-                  <div className="text-gray-400 text-sm">Total</div>
-                  <div className="text-xl font-bold text-[#00FF7B]">{subscriptionData.total}</div>
-                  <div className="text-xs text-gray-500">Overall</div>
+                <div className="bg-[#1A1A1A] p-3 rounded-lg border border-[#2d2d2d] flex flex-col items-center">
+                  <div className="text-gray-400 text-sm self-start">Total</div>
+                  <SubscriptionGauge value={parseFloat(subscriptionData.total) || 0} label="Overall" color="#00FF7B" size={64} />
                 </div>
               </div>
+
+              {/* Stacked area chart for subscription history */}
+              {stackedSubscriptionData.length > 1 && (
+                <div className="mt-4">
+                  <div className="flex items-center gap-4 mb-3 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-sm bg-[#3b82f6]"></div>
+                      <span className="text-gray-400">QIB</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-sm bg-[#a855f7]"></div>
+                      <span className="text-gray-400">NII</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-sm bg-[#f97316]"></div>
+                      <span className="text-gray-400">RII</span>
+                    </div>
+                  </div>
+                  <div className="h-48">
+                    <AreaChart
+                      data={stackedSubscriptionData}
+                      xDataKey="date"
+                      margin={{ top: 10, right: 10, bottom: 30, left: 40 }}
+                      className="h-full w-full"
+                      status="ready"
+                    >
+                      <Grid horizontal vertical={false} stroke="#2d2d2d" />
+                      <YAxisLabels numTicks={4} format={(v) => `${v}x`} />
+                      <XAxis numTicks={5} />
+                      <Area dataKey="riiCum" fill="#f97316" stroke="#f97316" fillOpacity={0.9} strokeWidth={1.5} showHighlight={false} />
+                      <Area dataKey="niiCum" fill="#a855f7" stroke="#a855f7" fillOpacity={0.9} strokeWidth={1.5} showHighlight={false} />
+                      <Area dataKey="qibCum" fill="#3b82f6" stroke="#3b82f6" fillOpacity={0.9} strokeWidth={1.5} showHighlight={false} />
+                      <ChartTooltip />
+                    </AreaChart>
+                  </div>
+                </div>
+              )}
+
               <div className="mt-3 text-xs text-gray-500">
                 Last updated: {subscriptionData.lastUpdated}
               </div>
@@ -280,7 +355,7 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
             </section>
           )}
 
-          {/* Chart*/}
+          {/* GMP Trend Area Chart */}
           <div className="mb-8 bg-[#0F0F0F] p-4 rounded-xl border border-[#2d2d2d]">
             <h3 className="text-lg font-medium mb-4 text-white">GMP Trend Analysis</h3>
             {isLoading ? (
@@ -300,10 +375,62 @@ export default function IPODetailModal({ ipoId, onClose, ipoData }: IPODetailMod
               </div>
             ) : (
               <div className="h-64 md:h-[420px]">
-                <Line data={chartData} options={chartOptions} />
+                <AreaChart
+                  data={areaChartData}
+                  xDataKey="date"
+                  margin={{ top: 20, right: 20, bottom: 30, left: 55 }}
+                  className="h-full w-full"
+                  status="ready"
+                >
+                  <Grid horizontal vertical={false} stroke="#2d2d2d" />
+                  <YAxisLabels numTicks={5} format={(v) => `₹${v}`} />
+                  <XAxis numTicks={5} />
+                  <Area
+                    dataKey="gmp"
+                    fill={gmpColor}
+                    stroke={gmpColor}
+                    fillOpacity={0.3}
+                    strokeWidth={2.5}
+                    showMarkers
+                  />
+                  <ChartTooltip />
+                </AreaChart>
               </div>
             )}
           </div>
+
+          {/* Est. Listing Line Chart (when we have enough data) */}
+          {gmpHistory.length > 2 && ipoData.price > 0 && (
+            <div className="mb-8 bg-[#0F0F0F] p-4 rounded-xl border border-[#2d2d2d]">
+              <h3 className="text-lg font-medium mb-4 text-white">Estimated Listing vs Issue Price</h3>
+              <div className="flex items-center gap-4 mb-3 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-4 h-0.5 bg-[#3b82f6] rounded"></div>
+                  <span className="text-gray-400">Est. Listing Price</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-4 h-0.5 border-t border-dashed border-[#f97316]"></div>
+                  <span className="text-gray-400">Issue Price (₹{ipoData.price})</span>
+                </div>
+              </div>
+              <div className="h-48 md:h-64">
+                <LineChart
+                  data={areaChartData}
+                  xDataKey="date"
+                  margin={{ top: 20, right: 20, bottom: 30, left: 55 }}
+                  className="h-full w-full"
+                  status="ready"
+                >
+                  <Grid horizontal vertical={false} stroke="#2d2d2d" />
+                  <YAxisLabels numTicks={5} format={(v) => `₹${v}`} />
+                  <XAxis numTicks={5} />
+                  <Line dataKey="ipoPrice" stroke="#f97316" strokeWidth={1.5} dashFromIndex={0} dashArray="6,4" />
+                  <Line dataKey="estListing" stroke="#3b82f6" strokeWidth={2.5} showMarkers />
+                  <ChartTooltip />
+                </LineChart>
+              </div>
+            </div>
+          )}
 
           {/* GMP history table */}
           <div className="overflow-x-auto custom-scrollbar">

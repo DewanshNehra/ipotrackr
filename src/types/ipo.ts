@@ -4,32 +4,41 @@ export interface APIIPOObject {
   "GMP": string;
   "Rating": string;
   "Sub": string;
-  "GMP(L/H)  (₹)": string;
   "Price (₹)": string;
-  "IPO Size (₹ in cr)": string;
-  "Lot": string;        
+  "IPO Size": string;
+  "Lot": string;
   "~P/E": string;
   "~id": number;
-  "Open": string;           
-  "Close": string;        
+  "Open": string;
+  "Close": string;
   "BoA Dt": string;
   "Listing": string;
   "Updated-On": string;
   "Anchor": string;
-  "~Srt_Open": string;     
-  "~Srt_Close": string;    
+  "~Srt_Open": string;
+  "~Srt_Close": string;
   "~Srt_BoA_Dt": string;
   "~Str_Listing": string;
   "~urlrewrite_folder_name": string;
   "~Display_Order": number;
   "~Highlight_Row": string;
   "~IPO_Category": string;
-  "~gmp_percent_calc"?: string; 
-  "~ipo_name"?: string;  
+  "~gmp_percent_calc"?: string;
+  "~ipo_name"?: string;
+  // Added upstream — explicit status/category codes + max GMP.
+  "~ipo_status1"?: string;   // U=upcoming, O=open, C=closed(pending), LN/LP=listed
+  "~ipo_category1"?: string;
+  "~max_gmp1"?: string;
+  "&#128293;Rating"?: string; // rating column was renamed (fire emoji prefix)
 }
 
 export interface APIResponse {
+  msg: string;
   reportTableData: APIIPOObject[];
+  totalRecords?: number;
+  totalPages?: number;
+  iPageNo?: number;
+  fldpage_size?: number;
 }
 
 export interface ProcessedIPOData {
@@ -52,7 +61,8 @@ export interface ProcessedIPOData {
   creditToDematDate?: string;
   listingDate?: string;
   expectedProfit: number;
-  detailsUrl: string; 
+  detailsUrl: string;
+  isSME: boolean;
 }
 
 export interface IPOActivityDates {
@@ -62,6 +72,8 @@ export interface IPOActivityDates {
   refundsInitiationDate?: string;
   creditToDematDate?: string;
   listingDate?: string;
+  /** Actual price the stock listed at (present only for listed IPOs). */
+  listingPrice?: number;
 }
 
 export interface GmpHistoryItem {
@@ -91,6 +103,7 @@ export interface IPOGmpResponse {
     max_ipo_price: string;
     estimated_listing_price: string;
     gmp_percent_calc: string;
+    gmp_percent_raw?: string;
     gmp_desc_other: string;
     up_down_status: string;
     gmp_active_record_flag: number;
@@ -100,6 +113,7 @@ export interface IPOGmpResponse {
     create_date_gmp: string;
     last_updated_gmp: string;
     last_updated: string;
+    last_updated_ex_year?: string;
   }>;
   ipoGmpTable: string;
 }
@@ -149,4 +163,12 @@ export interface ProcessedSubscriptionData {
   rii: string;
   total: string;
   lastUpdated: string;
+}
+
+export interface SubscriptionHistoryItem {
+  date: string;
+  qib: number;
+  nii: number;
+  rii: number;
+  total: number;
 }
