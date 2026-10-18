@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, dev]
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
