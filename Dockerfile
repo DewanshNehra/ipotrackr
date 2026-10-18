@@ -1,24 +1,23 @@
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 WORKDIR /app
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable pnpm
-
-ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID
-ARG NEXT_PUBLIC_UMAMI_SCRIPT_URL
-ARG NEXT_PUBLIC_GA_ID
 
 FROM base AS deps
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile --prod=false --ignore-scripts
 
 FROM base AS builder
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID
+ARG NEXT_PUBLIC_UMAMI_SCRIPT_URL
+ARG NEXT_PUBLIC_GA_ID
 ENV NEXT_PUBLIC_UMAMI_WEBSITE_ID=$NEXT_PUBLIC_UMAMI_WEBSITE_ID
 ENV NEXT_PUBLIC_UMAMI_SCRIPT_URL=$NEXT_PUBLIC_UMAMI_SCRIPT_URL
 ENV NEXT_PUBLIC_GA_ID=$NEXT_PUBLIC_GA_ID
 ENV NEXT_TELEMETRY_DISABLED=1
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
 RUN pnpm run build
 
 FROM base AS runner

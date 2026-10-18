@@ -19,7 +19,6 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
           run_install: false
 
       - name: Setup Node.js
@@ -45,7 +44,7 @@ jobs:
           NEXT_PUBLIC_GA_ID: ${{ secrets.NEXT_PUBLIC_GA_ID }}
 
   docker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     needs: lint-and-test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
@@ -76,7 +75,7 @@ jobs:
         with:
           context: .
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha

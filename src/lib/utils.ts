@@ -391,7 +391,6 @@ export function computeActivityProgress(
   return Math.max(0, Math.min(100, (completed / segments) * 100));
 }
 // Debounce utility for search tracking
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   delay: number
