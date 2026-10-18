@@ -3,8 +3,11 @@ import { processIPOData, processGmpHistoryData, processSubscriptionData } from '
 import type { IPOActivityDates } from '@/types/ipo';
 
 const API_BASE_URL = 'https://webnodejs.investorgain.com/cloud/v2/report/data-read/331/1/7/2026/2026-27/0/all';
-const GMP_API_BASE_URL = 'https://webnodejs.investorgain.com/cloud/v2/ipo/ipo-gmp-read';
-const SUBSCRIPTION_API_BASE_URL = 'https://webnodejs.investorgain.com/cloud/v2/ipo/ipo-subscription-read';
+// Per-IPO GMP + subscription data are fetched through our own origin (see
+// src/app/api/gmp/[id] and src/app/api/subscription/[id]) so the browser avoids
+// upstream CORS/rate-limit rejections and responses can be cached server-side.
+const GMP_API_BASE_URL = '/api/gmp';
+const SUBSCRIPTION_API_BASE_URL = '/api/subscription';
 
 export async function fetchIPOData(): Promise<ProcessedIPOData[]> {
   try {
@@ -36,7 +39,7 @@ export async function fetchIPOData(): Promise<ProcessedIPOData[]> {
 
 export async function fetchIPOGmpData(ipoId: number): Promise<GmpHistoryItem[]> {
   try {
-    const response = await fetch(`${GMP_API_BASE_URL}/${ipoId}/true`, {
+    const response = await fetch(`${GMP_API_BASE_URL}/${ipoId}`, {
       headers: {
         'Content-Type': 'application/json',
       },
@@ -61,7 +64,7 @@ export async function fetchIPOGmpData(ipoId: number): Promise<GmpHistoryItem[]> 
 
 export async function fetchIPOGmpRawData(ipoId: number): Promise<IPOGmpResponse> {
   try {
-    const response = await fetch(`${GMP_API_BASE_URL}/${ipoId}/true`, {
+    const response = await fetch(`${GMP_API_BASE_URL}/${ipoId}`, {
       headers: {
         'Content-Type': 'application/json',
       },

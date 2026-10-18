@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { fetchIPOGmpData } from '@/lib/api';
 import { GmpHistoryItem } from '@/types/ipo';
 import { AreaChart } from '@/components/charts/area-chart';
@@ -17,9 +17,34 @@ interface SparklineProps {
 export default function Sparkline({ ipoId, height = 40, className }: SparklineProps) {
   const [data, setData] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visible, setVisible] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+
+  // Only fetch once the card is (nearly) on screen. Firing all 50 requests at
+  // mount gets the client throttled by the upstream and leaves trends missing.
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '300px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
+    if (!visible) return;
     let cancelled = false;
+    setLoading(true);
     fetchIPOGmpData(ipoId)
       .then((history: GmpHistoryItem[]) => {
         if (cancelled) return;
@@ -29,7 +54,7 @@ export default function Sparkline({ ipoId, height = 40, className }: SparklinePr
       .catch(() => {})
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [ipoId]);
+  }, [ipoId, visible]);
 
   const hasSpark = data.length >= 2;
 
@@ -47,7 +72,7 @@ export default function Sparkline({ ipoId, height = 40, className }: SparklinePr
     : 0;
 
   return (
-    <div className={`flex items-center gap-2.5 ${className ?? ''}`}>
+    <div ref={wrapperRef} className={`flex items-center gap-2.5 ${className ?? ''}`}>
       <div className="flex-1 min-w-0" style={{ height }}>
         {hasSpark && (
           <AreaChart

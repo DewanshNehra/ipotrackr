@@ -25,6 +25,11 @@ export interface APIIPOObject {
   "~IPO_Category": string;
   "~gmp_percent_calc"?: string;
   "~ipo_name"?: string;
+  // Added upstream — explicit status/category codes + max GMP.
+  "~ipo_status1"?: string;   // U=upcoming, O=open, C=closed(pending), LN/LP=listed
+  "~ipo_category1"?: string;
+  "~max_gmp1"?: string;
+  "&#128293;Rating"?: string; // rating column was renamed (fire emoji prefix)
 }
 
 export interface APIResponse {
@@ -98,6 +103,7 @@ export interface IPOGmpResponse {
     max_ipo_price: string;
     estimated_listing_price: string;
     gmp_percent_calc: string;
+    gmp_percent_raw?: string;
     gmp_desc_other: string;
     up_down_status: string;
     gmp_active_record_flag: number;
@@ -107,6 +113,7 @@ export interface IPOGmpResponse {
     create_date_gmp: string;
     last_updated_gmp: string;
     last_updated: string;
+    last_updated_ex_year?: string;
   }>;
   ipoGmpTable: string;
 }
